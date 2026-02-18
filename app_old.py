@@ -2,17 +2,14 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Basic Page Configuration
+# Basic Page Configuration
 st.set_page_config(page_title="Ops Report Jan 2026", layout="wide")
 
-# Constants - Easy to change based on management policy
-HOURS_PER_DAY = 8 
-
 # Title and Description
-st.title("🚜 Machinery & Operator Productivity Dashboard")
+st.title("Machinery & Operator Productivity Dashboard")
 st.markdown("Interactive analysis of work hours for January 2026.")
 
-# 2. Data Loading and Processing
+# 1. Data Loading and Processing
 @st.cache_data
 def load_and_process_data():
     df = pd.read_csv('operator_work_hours_jan_2026.csv')
@@ -31,7 +28,7 @@ def load_and_process_data():
 
 df = load_and_process_data()
 
-# 3. Sidebar Filters
+# 2. Sidebar Filters
 st.sidebar.header("Data Filters")
 
 # Operator Filter
@@ -47,7 +44,7 @@ min_date = df['Worked Date'].min()
 max_date = df['Worked Date'].max()
 date_range = st.sidebar.date_input("Filter by Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
 
-# 4. Apply Filters to Data
+# 3. Apply Filters to Data
 filtered_df = df.copy()
 
 if selected_operators:
@@ -56,39 +53,28 @@ if selected_operators:
 if selected_machines:
     filtered_df = filtered_df[filtered_df['Machinery Code'].isin(selected_machines)]
 
-if isinstance(date_range, tuple) and len(date_range) == 2:
+if len(date_range) == 2:
     start_date, end_date = date_range
     filtered_df = filtered_df[(filtered_df['Worked Date'].dt.date >= start_date) & 
                              (filtered_df['Worked Date'].dt.date <= end_date)]
 
-# 5. Modular Metrics Calculation (Safe Logic)
+# 4. Top Metrics (KPIs)
 total_hrs = filtered_df['Hours'].sum()
+avg_daily = total_hrs / len(filtered_df['Worked Date'].unique()) if not filtered_df.empty else 0
 
-# Calendar Days: Counting unique dates the machine/operator appeared
-calendar_days = filtered_df['Worked Date'].nunique()
-
-# Standard Days: Converting total hours into 8-hour shift equivalents
-standard_days = total_hrs / HOURS_PER_DAY
-
-# Intensity: Comparing actual hours vs potential shift hours
-intensity = (standard_days / calendar_days * 100) if calendar_days > 0 else 0
-
-# 6. Dashboard KPI Row
-st.subheader("Key Performance Indicators")
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Total Hours", f"{total_hrs:.2f} hrs")
-m2.metric("Calendar Days Active", f"{calendar_days}")
-m3.metric("Standard Work Days", f"{standard_days:.2f}")
-m4.metric("Daily Intensity", f"{intensity:.1f}%")
+m1, m2, m3 = st.columns(3)
+m1.metric("Total Hours Logged", f"{total_hrs:.2f} hrs")
+m2.metric("Active Operators", len(filtered_df['Operator Name'].unique()))
+m3.metric("Avg Hours / Day", f"{avg_daily:.2f} hrs")
 
 st.divider()
 
-# 7. Visualizations
+# 5. Visualizations
 col1, col2 = st.columns([2, 1])
 
 with col1:
     st.subheader("Machinery Utilization (Stacked by Operator)")
-    # Visualizes the Many-to-Many relationship
+    # This addresses the 'Many-to-Many' relationship
     fig_mach = px.bar(
         filtered_df, 
         x="Machinery Code", 
@@ -107,9 +93,9 @@ with col2:
 
 st.subheader("Daily Workload Trend")
 daily_trend = filtered_df.groupby('Worked Date')['Hours'].sum().reset_index()
-fig_trend = px.area(daily_trend, x="Worked Date", y="Hours", line_shape="spline", color_discrete_sequence=['#7e22ce'])
+fig_trend = px.area(daily_trend, x="Worked Date", y="Hours", line_shape="spline")
 st.plotly_chart(fig_trend, use_container_width=True)
 
-# 8. Data Table
+# 6. Data Table
 with st.expander("View Raw Filtered Data"):
     st.dataframe(filtered_df.drop(columns=['Hours']), use_container_width=True)
