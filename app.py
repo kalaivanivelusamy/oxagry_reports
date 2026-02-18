@@ -9,7 +9,7 @@ st.set_page_config(page_title="Ops Report Jan 2026", layout="wide")
 HOURS_PER_DAY = 8 
 
 # Title and Description
-st.title("🚜 Machinery & Operator Productivity Dashboard")
+st.title(" Machinery & Operator Productivity Dashboard")
 st.markdown("Interactive analysis of work hours for January 2026.")
 
 # 2. Data Loading and Processing
